@@ -11,6 +11,7 @@ import {
   courses,
   customerProfiles,
   entitlements,
+  faqItems,
   lessonMedia,
   lessons,
   media,
@@ -88,6 +89,7 @@ async function main() {
     await seedCatalog(db);
     await seedAdminTwoFactor(db);
     await seedMedia(db);
+    await seedFreeOfferAndFaq(db);
     console.log(
       `Seeded ${PEOPLE.length} fictional users (password: ${SEED_PASSWORD}) and example courses.`,
     );
@@ -97,6 +99,73 @@ async function main() {
 }
 
 type SeedDb = ReturnType<typeof createDb>["db"];
+
+async function seedFreeOfferAndFaq(db: SeedDb) {
+  const [existing] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(eq(courses.slug, "mini-workbook"));
+  if (!existing) {
+    const [course] = await db
+      .insert(courses)
+      .values({
+        slug: "mini-workbook",
+        title: "Mini-Workbook: Ankommen (Beispiel)",
+        description: "Ein kostenloses Kennenlern-Angebot – fiktive Beispieldaten.",
+        isPublished: true,
+      })
+      .returning();
+    const [mod] = await db
+      .insert(modules)
+      .values({ courseId: course!.id, title: "Ankommen", position: 0 })
+      .returning();
+    await db.insert(lessons).values({
+      moduleId: mod!.id,
+      title: "Drei Minuten für dich",
+      position: 0,
+      body: "Ein kurzer, fiktiver Impuls zum Ausprobieren.",
+      durationMinutes: 3,
+    });
+    await db.insert(products).values({
+      slug: "mini-workbook",
+      title: "Mini-Workbook: Ankommen",
+      subtitle: "Kostenlos zum Kennenlernen",
+      description: "Ein kleines Geschenk zum Kennenlernen von Seelenzeit (fiktive Beispieldaten).",
+      tier: "free",
+      kind: "course_access",
+      courseId: course!.id,
+      accessMonths: null,
+      isPublished: true,
+      sortOrder: 50,
+    });
+  }
+  const [faq] = await db.select({ id: faqItems.id }).from(faqItems).limit(1);
+  if (!faq) {
+    await db.insert(faqItems).values([
+      {
+        position: 0,
+        question: "Ist das ein Abo?",
+        answer: "Nein. Jeder Kurs ist ein Einmalkauf. Es gibt keine automatische Verlängerung.",
+      },
+      {
+        position: 1,
+        question: "Wie lange habe ich Zugriff?",
+        answer:
+          "Kleine und mittlere Kurse sechs Monate, der große Kurs 24 Monate – jeweils ab Kauf. Du kannst bei Bedarf verlängern.",
+      },
+      {
+        position: 2,
+        question: "Kann ich aus der Schweiz kaufen?",
+        answer: "Ja, du kannst in Schweizer Franken bezahlen.",
+      },
+      {
+        position: 3,
+        question: "Ich kaufe für meine Firma – geht das?",
+        answer: "Ja. Im Bestellformular kannst du Firma, Rechnungsanschrift und USt-IdNr. angeben.",
+      },
+    ]);
+  }
+}
 
 /** A tiny valid one-page PDF with the given text. */
 function samplePdf(text: string): Buffer {

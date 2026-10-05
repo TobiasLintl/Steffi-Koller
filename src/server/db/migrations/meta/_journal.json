@@ -36,6 +36,13 @@
       "when": 1791230371429,
       "tag": "0004_m4_media",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791230757973,
+      "tag": "0005_m5_content_consent",
+      "breakpoints": true
     }
   ]
 }
