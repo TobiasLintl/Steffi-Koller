@@ -1,33 +1,46 @@
 /**
  * Video streaming adapter (Bunny Stream default, Cloudflare Stream alternative – DECISION D-04).
- * Playback only via signed, time-limited URLs (MED-02); no permanent public URLs.
+ * Playback only via signed, time-limited URLs (MED-02) with adaptive bitrate (MED-03);
+ * no permanent public URLs.
  */
 
-export interface VideoAsset {
-  /** Provider-side video id; stored on the lesson media record. */
-  providerVideoId: string;
-  status: "processing" | "ready" | "failed";
-  durationSeconds?: number;
-}
+export type VideoStatus = "processing" | "ready" | "failed";
 
-export interface SignedPlayback {
-  /** Embed or HLS URL including token; adaptive bitrate (MED-03). */
+export interface VideoUploadTarget {
+  /** "tus": resumable upload protocol (Bunny), "put": single signed PUT (local driver). */
+  protocol: "tus" | "put";
   url: string;
-  expiresAt: Date;
-}
-
-export interface UploadTarget {
-  providerVideoId: string;
-  /** Direct upload endpoint for the admin UI. */
-  uploadUrl: string;
   headers: Record<string, string>;
   expiresAt: Date;
 }
 
+export type VideoPlayback =
+  | { type: "iframe"; url: string; expiresAt: Date }
+  | {
+      type: "file";
+      url: string;
+      expiresAt: Date;
+      captions: { language: string; label: string; url: string }[];
+    };
+
 export interface VideoAdapter {
-  createUpload(input: { title: string }): Promise<UploadTarget>;
-  getAsset(providerVideoId: string): Promise<VideoAsset>;
-  getSignedPlayback(providerVideoId: string, ttlSeconds: number): Promise<SignedPlayback>;
-  uploadCaptions(providerVideoId: string, input: { language: string; vtt: string }): Promise<void>;
-  deleteAsset(providerVideoId: string): Promise<void>;
+  readonly provider: "bunny" | "local";
+  createVideo(input: { title: string }): Promise<{ providerVideoId: string }>;
+  createUploadTarget(
+    providerVideoId: string,
+    file: { contentType: string; size: number; title: string },
+  ): Promise<VideoUploadTarget>;
+  getStatus(providerVideoId: string): Promise<{ status: VideoStatus; durationSeconds?: number }>;
+  getPlayback(
+    providerVideoId: string,
+    options: {
+      ttlSeconds: number;
+      captions: { language: string; label: string; storageKey: string }[];
+    },
+  ): Promise<VideoPlayback>;
+  uploadCaptions(
+    providerVideoId: string,
+    input: { language: string; label: string; vtt: string },
+  ): Promise<void>;
+  deleteVideo(providerVideoId: string): Promise<void>;
 }

@@ -240,6 +240,28 @@ export type LessonResult =
       unlocksAt?: Date;
     };
 
+/** Side-effect free access check for a lesson inside a course (entitlement + drip). */
+export async function checkLessonAccess(
+  db: DbExecutor,
+  userId: string,
+  courseSlug: string,
+  lessonId: string,
+  now = new Date(),
+): Promise<{ status: "ok"; courseId: string } | { status: "not_found" } | { status: "forbidden" }> {
+  if (!/^[0-9a-f-]{36}$/i.test(lessonId)) return { status: "not_found" };
+  const [row] = await db
+    .select({ courseId: courses.id, unlockAfterDays: modules.unlockAfterDays })
+    .from(lessons)
+    .innerJoin(modules, eq(modules.id, lessons.moduleId))
+    .innerJoin(courses, eq(courses.id, modules.courseId))
+    .where(and(eq(lessons.id, lessonId), eq(courses.slug, courseSlug)));
+  if (!row) return { status: "not_found" };
+  const ent = await findEntitlement(db, userId, row.courseId);
+  return lessonAccess(ent, row, now).allowed
+    ? { status: "ok", courseId: row.courseId }
+    : { status: "forbidden" };
+}
+
 /** The only way lesson content leaves the database. Checks entitlement + drip server-side. */
 export async function getLessonForUser(
   db: DbExecutor,

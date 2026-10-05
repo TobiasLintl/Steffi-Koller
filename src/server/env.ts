@@ -21,19 +21,59 @@ const serverEnvSchema = z
     MAIL_SENDER_NAME: z.string().default("Seelenzeit"),
     ADMIN_NOTIFICATION_EMAIL: z.email().optional(),
 
+    STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+    LOCAL_STORAGE_DIR: z.string().default("./var/storage"),
+    S3_ENDPOINT: z.url().optional(),
+    S3_REGION: z.string().default("eu-central"),
+    S3_BUCKET: z.string().optional(),
+    S3_ACCESS_KEY_ID: z.string().optional(),
+    S3_SECRET_ACCESS_KEY: z.string().optional(),
+    S3_FORCE_PATH_STYLE: z.enum(["true", "false"]).default("false"),
+    MEDIA_URL_TTL_SECONDS: z.coerce.number().int().min(30).max(3600).default(600),
+
+    VIDEO_DRIVER: z.enum(["local", "bunny"]).default("local"),
+    BUNNY_STREAM_LIBRARY_ID: z.string().optional(),
+    BUNNY_STREAM_API_KEY: z.string().optional(),
+    BUNNY_STREAM_TOKEN_KEY: z.string().optional(),
+    VIDEO_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(3600),
+
     COPECART_WEBHOOK_SECRET: z.string().optional(),
     DIGISTORE24_IPN_PASSPHRASE: z.string().optional(),
   })
   .refine((env) => env.NODE_ENV !== "production" || Boolean(env.BETTER_AUTH_SECRET), {
     message: "BETTER_AUTH_SECRET is required in production",
     path: ["BETTER_AUTH_SECRET"],
-  });
+  })
+  .refine(
+    (env) =>
+      env.STORAGE_DRIVER !== "s3" ||
+      Boolean(env.S3_ENDPOINT && env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY),
+    {
+      message:
+        "S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY are required for STORAGE_DRIVER=s3",
+      path: ["STORAGE_DRIVER"],
+    },
+  )
+  .refine(
+    (env) =>
+      env.VIDEO_DRIVER !== "bunny" ||
+      Boolean(
+        env.BUNNY_STREAM_LIBRARY_ID && env.BUNNY_STREAM_API_KEY && env.BUNNY_STREAM_TOKEN_KEY,
+      ),
+    {
+      message:
+        "BUNNY_STREAM_LIBRARY_ID, BUNNY_STREAM_API_KEY and BUNNY_STREAM_TOKEN_KEY are required for VIDEO_DRIVER=bunny",
+      path: ["VIDEO_DRIVER"],
+    },
+  );
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
 let cached: ServerEnv | undefined;
 
 export function serverEnv(): ServerEnv {
-  cached ??= serverEnvSchema.parse(process.env);
+  // Treat empty values (KEY= in .env) as unset.
+  const raw = Object.fromEntries(Object.entries(process.env).filter(([, v]) => v !== ""));
+  cached ??= serverEnvSchema.parse(raw);
   return cached;
 }

@@ -315,13 +315,11 @@ describe("CopeCart webhook", () => {
       .select({ id: productProviderMappings.productId })
       .from(productProviderMappings)
       .where(eq(productProviderMappings.providerProductId, "cc-small-001"));
-    await db
-      .insert(productProviderMappings)
-      .values({
-        provider: "copecart",
-        providerProductId: "cc-unknown-999",
-        productId: product!.id,
-      });
+    await db.insert(productProviderMappings).values({
+      provider: "copecart",
+      providerProductId: "cc-unknown-999",
+      productId: product!.id,
+    });
     const outcome = await reprocessWebhookEvent(
       db,
       createCopeCartAdapter({ secret: "unused" }),

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 
 import { hashPassword, symmetricEncrypt } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
@@ -10,7 +11,9 @@ import {
   courses,
   customerProfiles,
   entitlements,
+  lessonMedia,
   lessons,
+  media,
   modules,
   productProviderMappings,
   products,
@@ -84,6 +87,7 @@ async function main() {
     }
     await seedCatalog(db);
     await seedAdminTwoFactor(db);
+    await seedMedia(db);
     console.log(
       `Seeded ${PEOPLE.length} fictional users (password: ${SEED_PASSWORD}) and example courses.`,
     );
@@ -93,6 +97,80 @@ async function main() {
 }
 
 type SeedDb = ReturnType<typeof createDb>["db"];
+
+/** A tiny valid one-page PDF with the given text. */
+function samplePdf(text: string): Buffer {
+  const stream = `BT /F1 18 Tf 72 720 Td (${text.replace(/[()\\]/g, "")}) Tj ET`;
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objects.forEach((o, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${o}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, "latin1");
+}
+
+/** Example PDFs for local development (local storage driver only). */
+async function seedMedia(db: SeedDb) {
+  if ((process.env.STORAGE_DRIVER ?? "local") !== "local") return;
+  const root = path.resolve(process.env.LOCAL_STORAGE_DIR ?? "./var/storage");
+  const [lesson] = await db
+    .select({ id: lessons.id })
+    .from(lessons)
+    .innerJoin(modules, eq(modules.id, lessons.moduleId))
+    .innerJoin(courses, eq(courses.id, modules.courseId))
+    .where(eq(courses.slug, "achtsam-durch-den-tag"))
+    .orderBy(modules.position, lessons.position)
+    .limit(1);
+  if (!lesson) return;
+  const [existing] = await db
+    .select({ id: lessonMedia.mediaId })
+    .from(lessonMedia)
+    .where(eq(lessonMedia.lessonId, lesson.id));
+  if (existing) return;
+  const items = [
+    {
+      title: "Workbook zum Herunterladen (Beispiel)",
+      fileName: "workbook.pdf",
+      downloadAllowed: true,
+    },
+    {
+      title: "Arbeitsblatt nur zum Ansehen (Beispiel)",
+      fileName: "arbeitsblatt.pdf",
+      downloadAllowed: false,
+    },
+  ];
+  for (const [i, item] of items.entries()) {
+    const id = randomUUID();
+    const storageKey = `pdf/${id}.pdf`;
+    const file = path.join(root, storageKey);
+    mkdirSync(path.dirname(file), { recursive: true });
+    const pdf = samplePdf(item.title);
+    writeFileSync(file, pdf);
+    await db.insert(media).values({
+      id,
+      kind: "pdf",
+      title: item.title,
+      fileName: item.fileName,
+      mimeType: "application/pdf",
+      sizeBytes: pdf.length,
+      downloadAllowed: item.downloadAllowed,
+      storageKey,
+      status: "ready",
+    });
+    await db.insert(lessonMedia).values({ lessonId: lesson.id, mediaId: id, position: i });
+  }
+}
 
 /**
  * Development only: the seeded admin gets a fixed, publicly known TOTP secret so that local
