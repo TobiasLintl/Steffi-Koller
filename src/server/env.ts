@@ -19,6 +19,8 @@ const serverEnvSchema = z
     MAIL_FROM_SUPPORT: z.email().default("kundenservice@seelenzeit.de"),
     MAIL_FROM_NEWSLETTER: z.email().default("newsletter@seelenzeit.de"),
     MAIL_SENDER_NAME: z.string().default("Seelenzeit"),
+    NEWSLETTER_DRIVER: z.enum(["log", "brevo"]).default("log"),
+    BREVO_NEWSLETTER_LIST_ID: z.coerce.number().int().positive().optional(),
     ADMIN_NOTIFICATION_EMAIL: z.email().optional(),
 
     STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),

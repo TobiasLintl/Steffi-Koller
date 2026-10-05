@@ -1,7 +1,9 @@
 import "server-only";
 
+import { db } from "@/server/db";
 import { serverEnv } from "@/server/env";
-import { sendMail } from "@/server/mail/send";
+import { mailAdapter, sendMail } from "@/server/mail/send";
+import { sendLoggedMail } from "@/server/services/mailer";
 import {
   accessExtendedMail,
   accessGrantedMail,
@@ -30,7 +32,13 @@ export async function runWebhookEffects(effects: WebhookEffect[]): Promise<void>
                 name: effect.name,
                 expiresAt: effect.expiresAt,
               });
-        await sendMail("access_granted", effect.email, content);
+        await sendLoggedMail(db, mailAdapter(), {
+          kind: "access_granted",
+          to: effect.email,
+          userId: effect.userId,
+          content,
+          replyTo: env.MAIL_FROM_SUPPORT,
+        });
       } else if (effect.type === "admin_mail" && env.ADMIN_NOTIFICATION_EMAIL) {
         await sendMail(
           "admin_notification",

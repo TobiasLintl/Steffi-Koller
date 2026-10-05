@@ -140,7 +140,10 @@ export function expiryReminderMail(input: {
   });
 }
 
-export function newsletterConfirmationMail(input: { url: string }): MailContent {
+export function newsletterConfirmationMail(input: {
+  url: string;
+  unsubscribeUrl?: string;
+}): MailContent {
   return renderMail({
     subject: "Bitte bestätige deine Newsletter-Anmeldung",
     greeting: greeting(),
@@ -153,7 +156,11 @@ export function newsletterConfirmationMail(input: { url: string }): MailContent 
       },
     ],
     action: { label: "Anmeldung bestätigen", url: input.url },
-    footnote: "Wenn du dich nicht angemeldet hast, ignoriere diese E-Mail – dann passiert nichts.",
+    footnote: `Wenn du dich nicht angemeldet hast, ignoriere diese E-Mail – dann passiert nichts.${
+      input.unsubscribeUrl
+        ? ` Später abmelden kannst du dich jederzeit hier: ${input.unsubscribeUrl}`
+        : ""
+    }`,
   });
 }
 

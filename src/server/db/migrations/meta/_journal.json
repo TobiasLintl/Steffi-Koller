@@ -43,6 +43,13 @@
       "when": 1791230757973,
       "tag": "0005_m5_content_consent",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791231741337,
+      "tag": "0006_m6_email_newsletter",
+      "breakpoints": true
     }
   ]
 }
