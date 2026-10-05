@@ -12,6 +12,8 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    // Consent already decided ("necessary only"), so the banner does not cover the UI.
+    storageState: "tests/e2e/consent-state.json",
     // Optional: use a preinstalled Chromium instead of the version Playwright downloads.
     launchOptions: process.env.PW_CHROMIUM_EXECUTABLE
       ? { executablePath: process.env.PW_CHROMIUM_EXECUTABLE }

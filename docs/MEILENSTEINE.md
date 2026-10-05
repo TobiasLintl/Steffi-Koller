@@ -93,7 +93,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M5 – Öffentliche Website, Rechtliches, Consent ⬜
+### M5 – Öffentliche Website, Rechtliches, Consent ✅
 **Ziel:** Vollständiger öffentlicher Auftritt.
 - Startseite, Über mich, Angebotsübersicht, Produktseiten mit Kaufen-Button (Reseller-Link)
 - Lead-Magnet-Seite (Giveaway), FAQ, Kontaktformular

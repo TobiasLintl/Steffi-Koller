@@ -3,9 +3,9 @@ import { CmsPage, cmsMetadata } from "@/components/site/cms-page";
 export const dynamic = "force-dynamic";
 
 export function generateMetadata() {
-  return cmsMetadata("start");
+  return cmsMetadata("datenschutz");
 }
 
-export default function HomePage() {
-  return <CmsPage slug="start" />;
+export default function PrivacyPage() {
+  return <CmsPage slug="datenschutz" />;
 }

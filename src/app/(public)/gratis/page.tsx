@@ -3,9 +3,9 @@ import { CmsPage, cmsMetadata } from "@/components/site/cms-page";
 export const dynamic = "force-dynamic";
 
 export function generateMetadata() {
-  return cmsMetadata("start");
+  return cmsMetadata("gratis");
 }
 
-export default function HomePage() {
-  return <CmsPage slug="start" />;
+export default function FreePage() {
+  return <CmsPage slug="gratis" />;
 }
