@@ -2,3 +2,5 @@
 export * from "./auth";
 export * from "./customers";
 export * from "./audit";
+export * from "./catalog";
+export * from "./access";
