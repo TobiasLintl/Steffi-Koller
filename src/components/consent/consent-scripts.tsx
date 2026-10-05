@@ -11,9 +11,11 @@ import { readConsent } from "./consent-banner";
 export function ConsentScripts({
   statisticsScriptUrl,
   statisticsDomain,
+  nonce,
 }: {
   statisticsScriptUrl?: string;
   statisticsDomain?: string;
+  nonce?: string;
 }) {
   useEffect(() => {
     function apply() {
@@ -23,12 +25,13 @@ export function ConsentScripts({
       script.src = statisticsScriptUrl;
       script.defer = true;
       script.dataset.consent = "statistics";
+      if (nonce) script.nonce = nonce;
       if (statisticsDomain) script.dataset.domain = statisticsDomain;
       document.head.appendChild(script);
     }
     apply();
     window.addEventListener("seelenzeit:consent-changed", apply);
     return () => window.removeEventListener("seelenzeit:consent-changed", apply);
-  }, [statisticsScriptUrl, statisticsDomain]);
+  }, [statisticsScriptUrl, statisticsDomain, nonce]);
   return null;
 }

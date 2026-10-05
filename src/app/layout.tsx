@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 
 import { ConsentBanner } from "@/components/consent/consent-banner";
 import { ConsentScripts } from "@/components/consent/consent-scripts";
@@ -25,7 +26,9 @@ export const viewport: Viewport = {
   themeColor: "#3f6f5e",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Reading the request makes every page dynamic, so each response gets its own CSP nonce.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="de" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
@@ -40,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </div>
         <ConsentBanner />
         <ConsentScripts
+          nonce={nonce}
           statisticsScriptUrl={process.env.NEXT_PUBLIC_STATISTICS_SCRIPT_URL}
           statisticsDomain={process.env.NEXT_PUBLIC_STATISTICS_DOMAIN}
         />
