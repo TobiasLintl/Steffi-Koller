@@ -38,7 +38,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M1 – Datenmodell, Login, Rollen ⬜
+### M1 – Datenmodell, Login, Rollen ✅
 **Ziel:** Nutzer können sich registrieren und anmelden, Rollen greifen.
 - Schema: `users`, `customer_profiles` (B2C/B2B, Land, Firma, USt-IdNr.), `roles`,
   `audit_log`

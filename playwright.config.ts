@@ -23,6 +23,7 @@ export default defineConfig({
   ],
   webServer: {
     command: `pnpm build && pnpm start --port ${port}`,
+    env: { NEXT_PUBLIC_APP_URL: baseURL, AUTH_RATE_LIMIT: "off" },
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
