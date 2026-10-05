@@ -2,10 +2,16 @@ import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 
 import { ProfileForm } from "@/components/account/profile-form";
+import { NewsletterForm } from "@/components/site/newsletter-form";
+import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate } from "@/lib/format";
+import { NEWSLETTER_CONSENT_TEXT } from "@/server/domain/newsletter/rules";
+import { newsletterStatusFor } from "@/server/services/newsletter";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { customerProfiles } from "@/server/db/schema";
-import { saveProfile } from "./actions";
+import { saveProfile, unsubscribeOwnNewsletter } from "./actions";
 
 export const metadata: Metadata = { title: "Profil" };
 
@@ -15,6 +21,7 @@ export default async function ProfilePage() {
     .select()
     .from(customerProfiles)
     .where(eq(customerProfiles.userId, user.id));
+  const newsletter = await newsletterStatusFor(db, user.email);
 
   return (
     <div className="flex flex-col gap-6">
@@ -36,6 +43,32 @@ export default async function ProfilePage() {
           city: profile?.city ?? null,
         }}
       />
+
+      <Card className="max-w-xl">
+        <CardHeader>
+          <CardTitle>Newsletter</CardTitle>
+          <CardDescription>
+            {newsletter?.status === "confirmed"
+              ? `Angemeldet seit ${formatDate(newsletter.confirmedAt)}.`
+              : newsletter?.status === "pending"
+                ? "Bestätigung ausstehend – bitte schau in dein Postfach."
+                : "Du bist nicht angemeldet."}
+          </CardDescription>
+        </CardHeader>
+        {newsletter?.status === "confirmed" ? (
+          <form action={unsubscribeOwnNewsletter}>
+            <Button type="submit" variant="outline">
+              Newsletter abbestellen
+            </Button>
+          </form>
+        ) : (
+          <NewsletterForm
+            source="account"
+            consentText={NEWSLETTER_CONSENT_TEXT}
+            defaultEmail={user.email}
+          />
+        )}
+      </Card>
     </div>
   );
 }

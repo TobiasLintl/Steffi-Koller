@@ -106,7 +106,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M6 – E-Mail und Newsletter ⬜
+### M6 – E-Mail und Newsletter ✅
 **Ziel:** Zuverlässige Kommunikation.
 - Mail-Adapter (Brevo): Zugang, Passwort, Modulfreischaltung, Ablauf-Erinnerung
   (z. B. 30 und 7 Tage vorher, mit Verlängerungslink), Support

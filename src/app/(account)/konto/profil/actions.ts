@@ -7,6 +7,8 @@ import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { customerProfiles } from "@/server/db/schema";
 import { customerProfileSchema, normalizeProfile } from "@/server/domain/customers/profile";
+import { newsletterAdapter } from "@/server/newsletter/registry";
+import { unsubscribeEmail } from "@/server/services/newsletter";
 
 export async function saveProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await requireUser("/konto/profil");
@@ -29,4 +31,10 @@ export async function saveProfile(_prev: ActionState, formData: FormData): Promi
     });
   revalidatePath("/konto/profil");
   return { ok: true, message: "Deine Angaben sind gespeichert." };
+}
+
+export async function unsubscribeOwnNewsletter(): Promise<void> {
+  const user = await requireUser("/konto/profil");
+  await unsubscribeEmail(db, newsletterAdapter(), user.email);
+  revalidatePath("/konto/profil");
 }
