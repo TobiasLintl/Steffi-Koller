@@ -51,7 +51,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M2 – Kurse, Zugänge, Drip ⬜
+### M2 – Kurse, Zugänge, Drip ✅
 **Ziel:** Kernlogik der Lernplattform, zunächst ohne Zahlung (manuelle Freischaltung).
 - Schema: `products`, `courses`, `modules`, `lessons`, `entitlements`, `entitlement_events`,
   `lesson_progress`

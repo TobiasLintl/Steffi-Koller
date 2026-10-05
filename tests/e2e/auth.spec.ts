@@ -1,14 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-// Uses the fictional seed users (pnpm db:seed).
-const PASSWORD = process.env.SEED_PASSWORD ?? "seelenzeit-dev-123";
-
-async function login(page: Page, email: string, next = "/konto") {
-  await page.goto(`/anmelden?next=${encodeURIComponent(next)}`);
-  await page.getByLabel("E-Mail-Adresse").fill(email);
-  await page.getByLabel("Passwort", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Anmelden" }).click();
-}
+import { login } from "./helpers";
 
 test("visitors without session are sent to the login page", async ({ page }) => {
   await page.goto("/konto");
