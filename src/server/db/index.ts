@@ -1,11 +1,27 @@
 import "server-only";
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import { env } from "@/server/env";
+import { serverEnv } from "@/server/env";
 import * as schema from "./schema";
 
-const client = postgres(env.DATABASE_URL, { max: 10 });
+export type Db = PostgresJsDatabase<typeof schema>;
 
-export const db = drizzle(client, { schema });
-export type Db = typeof db;
+export function createDb(url: string, max = 10): { db: Db; close: () => Promise<void> } {
+  const client = postgres(url, { max });
+  return { db: drizzle(client, { schema, casing: "snake_case" }), close: () => client.end() };
+}
+
+let instance: Db | undefined;
+
+function getDb(): Db {
+  instance ??= createDb(serverEnv().DATABASE_URL).db;
+  return instance;
+}
+
+/** Lazily connected singleton, so importing this module never needs a database. */
+export const db: Db = new Proxy({} as Db, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getDb(), prop, receiver);
+  },
+});

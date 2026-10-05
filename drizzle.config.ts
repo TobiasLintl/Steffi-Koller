@@ -11,6 +11,7 @@ export default defineConfig({
   schema: "./src/server/db/schema/index.ts",
   out: "./src/server/db/migrations",
   dbCredentials: { url: databaseUrl },
+  casing: "snake_case",
   strict: true,
   verbose: true,
 });

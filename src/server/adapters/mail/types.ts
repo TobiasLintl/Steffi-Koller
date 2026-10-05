@@ -7,6 +7,10 @@ export type TransactionalMailKind =
   | "access_granted"
   | "magic_link"
   | "password_reset"
+  | "email_verification"
+  | "staff_invite"
+  | "admin_notification"
+  | "newsletter_confirmation"
   | "module_unlocked"
   | "expiry_reminder"
   | "support";
