@@ -8,3 +8,4 @@ export * from "./orders";
 export * from "./media";
 export * from "./content";
 export * from "./communication";
+export * from "./admin";

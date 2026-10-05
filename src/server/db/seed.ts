@@ -33,6 +33,7 @@ const PEOPLE = [
   { email: "redaktion@example.test", name: "Ella Editor", role: "editor" },
   { email: "buchhaltung@example.test", name: "Bea Buchhaltung", role: "accounting" },
   { email: "freigabe@example.test", name: "Rita Review", role: "report_approver" },
+  { email: "neu@example.test", name: "Nora Neu", role: "editor" },
   { email: "kundin@example.test", name: "Klara Kundin", role: "customer", country: "DE" },
   { email: "kunde.ch@example.test", name: "Urs Kunde", role: "customer", country: "CH" },
   {
@@ -245,29 +246,34 @@ async function seedMedia(db: SeedDb) {
  * Development only: the seeded admin gets a fixed, publicly known TOTP secret so that local
  * E2E tests can sign in. Never run the seed against production.
  */
-export const DEV_ADMIN_TOTP_SECRET = "seelenzeit-dev-totp-secret-00001";
+export const DEV_TOTP_SECRETS: Record<string, string> = {
+  "admin@example.test": "seelenzeit-dev-totp-secret-00001",
+  "support@example.test": "seelenzeit-dev-totp-secret-00002",
+  "redaktion@example.test": "seelenzeit-dev-totp-secret-00003",
+  "buchhaltung@example.test": "seelenzeit-dev-totp-secret-00004",
+  "freigabe@example.test": "seelenzeit-dev-totp-secret-00005",
+};
 
 async function seedAdminTwoFactor(db: SeedDb) {
   const secret = process.env.BETTER_AUTH_SECRET;
   if (!secret || process.env.NODE_ENV === "production") return;
-  const [admin] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, "admin@example.test"));
-  if (!admin) return;
-  const [existing] = await db
-    .select({ id: twoFactors.id })
-    .from(twoFactors)
-    .where(eq(twoFactors.userId, admin.id));
-  if (existing) return;
-  await db.insert(twoFactors).values({
-    id: randomUUID(),
-    userId: admin.id,
-    secret: await symmetricEncrypt({ key: secret, data: DEV_ADMIN_TOTP_SECRET }),
-    backupCodes: await symmetricEncrypt({ key: secret, data: JSON.stringify(["devbk-00001"]) }),
-    verified: true,
-  });
-  await db.update(users).set({ twoFactorEnabled: true }).where(eq(users.id, admin.id));
+  for (const [email, totpSecret] of Object.entries(DEV_TOTP_SECRETS)) {
+    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+    if (!user) continue;
+    const [existing] = await db
+      .select({ id: twoFactors.id })
+      .from(twoFactors)
+      .where(eq(twoFactors.userId, user.id));
+    if (existing) continue;
+    await db.insert(twoFactors).values({
+      id: randomUUID(),
+      userId: user.id,
+      secret: await symmetricEncrypt({ key: secret, data: totpSecret }),
+      backupCodes: await symmetricEncrypt({ key: secret, data: JSON.stringify(["devbk-00001"]) }),
+      verified: true,
+    });
+    await db.update(users).set({ twoFactorEnabled: true }).where(eq(users.id, user.id));
+  }
 }
 
 const COURSES = [

@@ -17,8 +17,14 @@ import {
 } from "@/server/db/schema";
 import { serverEnv } from "@/server/env";
 import { sendMail } from "@/server/mail/send";
-import { emailVerificationMail, magicLinkMail, passwordResetMail } from "@/server/mail/templates";
-import { isRole, isStaffRole } from "./permissions";
+import {
+  emailVerificationMail,
+  magicLinkMail,
+  passwordResetMail,
+  staffInviteMail,
+} from "@/server/mail/templates";
+import { hasCredentialAccount } from "@/server/services/staff";
+import { isRole, isStaffRole, ROLE_LABELS } from "./permissions";
 
 function createAuth() {
   const env = serverEnv();
@@ -42,7 +48,19 @@ function createAuth() {
       requireEmailVerification: true,
       minPasswordLength: 10,
       revokeSessionsOnPasswordReset: true,
+      // Also used for staff invitations, hence 24 hours.
+      resetPasswordTokenExpiresIn: 60 * 60 * 24,
       sendResetPassword: async ({ user, url }) => {
+        const role = (user as { role?: unknown }).role;
+        // Invited staff without a password receive an invitation instead of a reset mail.
+        if (isRole(role) && isStaffRole(role) && !(await hasCredentialAccount(db, user.id))) {
+          await sendMail(
+            "staff_invite",
+            user.email,
+            staffInviteMail({ url, roleLabel: ROLE_LABELS[role] }),
+          );
+          return;
+        }
         await sendMail("password_reset", user.email, passwordResetMail({ url, name: user.name }));
       },
     },

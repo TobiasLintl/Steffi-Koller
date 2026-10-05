@@ -3,10 +3,18 @@ import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import {
+  contactMessages,
   courses,
   customerProfiles,
   entitlementEvents,
   entitlements,
+  lessonProgress,
+  lessons,
+  modules,
+  newsletterSubscriptions,
+  orders,
+  products,
+  supportNotes,
   users,
 } from "@/server/db/schema";
 import type { DbExecutor } from "@/server/db/types";
@@ -167,4 +175,73 @@ export async function findOrCreateCustomer(
     .onConflictDoUpdate({ target: customerProfiles.userId, set: patch });
 
   return { ...user, created: Boolean(inserted[0]) };
+}
+
+/** Additional sections of the customer file; each is only loaded when the viewer may see it. */
+export async function getCustomerFileExtras(
+  db: DbExecutor,
+  userId: string,
+  email: string,
+  include: { orders: boolean; newsletter: boolean; support: boolean },
+) {
+  const progress = await db
+    .select({
+      courseId: modules.courseId,
+      completed: sql<number>`count(${lessonProgress.completedAt})::int`,
+      lastViewedAt: sql<Date | null>`max(${lessonProgress.lastViewedAt})`,
+    })
+    .from(lessonProgress)
+    .innerJoin(lessons, eq(lessons.id, lessonProgress.lessonId))
+    .innerJoin(modules, eq(modules.id, lessons.moduleId))
+    .where(eq(lessonProgress.userId, userId))
+    .groupBy(modules.courseId);
+  const totals = await db
+    .select({ courseId: modules.courseId, total: sql<number>`count(${lessons.id})::int` })
+    .from(lessons)
+    .innerJoin(modules, eq(modules.id, lessons.moduleId))
+    .groupBy(modules.courseId);
+
+  return {
+    progress: progress.map((p) => ({
+      ...p,
+      total: totals.find((t) => t.courseId === p.courseId)?.total ?? 0,
+    })),
+    orders: include.orders
+      ? await db
+          .select({ order: orders, productTitle: products.title })
+          .from(orders)
+          .leftJoin(products, eq(products.id, orders.productId))
+          .where(eq(orders.userId, userId))
+          .orderBy(desc(orders.purchasedAt))
+      : null,
+    newsletter: include.newsletter
+      ? ((
+          await db
+            .select()
+            .from(newsletterSubscriptions)
+            .where(eq(newsletterSubscriptions.email, email.toLowerCase()))
+        )[0] ?? null)
+      : undefined,
+    notes: include.support
+      ? await db
+          .select()
+          .from(supportNotes)
+          .where(eq(supportNotes.userId, userId))
+          .orderBy(desc(supportNotes.createdAt))
+      : null,
+    messages: include.support
+      ? await db
+          .select()
+          .from(contactMessages)
+          .where(eq(contactMessages.userId, userId))
+          .orderBy(desc(contactMessages.createdAt))
+      : null,
+  };
+}
+
+export async function addSupportNote(
+  db: DbExecutor,
+  input: { userId: string; authorId: string; authorName: string; note: string },
+) {
+  await db.insert(supportNotes).values(input);
 }

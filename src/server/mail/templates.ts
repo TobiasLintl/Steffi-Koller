@@ -22,7 +22,7 @@ export function passwordResetMail(input: { url: string; name?: string | null }):
     paragraphs: [{ text: "du möchtest ein neues Passwort festlegen? Kein Problem." }],
     action: { label: "Passwort neu festlegen", url: input.url },
     footnote:
-      "Der Link ist eine Stunde gültig. Wenn du kein neues Passwort angefordert hast, ignoriere diese E-Mail – dein bisheriges Passwort bleibt bestehen.",
+      "Der Link ist 24 Stunden gültig. Wenn du kein neues Passwort angefordert hast, ignoriere diese E-Mail – dein bisheriges Passwort bleibt bestehen.",
   });
 }
 
@@ -48,7 +48,7 @@ export function staffInviteMail(input: { url: string; roleLabel: string }): Mail
         text: `du wurdest als „${input.roleLabel}“ in den Adminbereich von Seelenzeit eingeladen.`,
       },
       {
-        text: "Bitte lege über den Link ein Passwort fest. Danach richtest du die Zwei-Faktor-Anmeldung mit einer Authenticator-App ein.",
+        text: "Bitte lege über den Link ein Passwort fest (der Link ist 24 Stunden gültig). Danach richtest du die Zwei-Faktor-Anmeldung mit einer Authenticator-App ein.",
       },
     ],
     action: { label: "Passwort festlegen", url: input.url },
