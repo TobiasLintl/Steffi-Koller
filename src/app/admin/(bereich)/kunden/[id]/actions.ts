@@ -8,6 +8,9 @@ import { requirePermission } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { adminExtendAccess, adminGrantAccess, adminRevokeAccess } from "@/server/services/access";
 import { addSupportNote } from "@/server/services/customers";
+import { newsletterAdapter } from "@/server/newsletter/registry";
+import { deleteAccount, PrivacyError } from "@/server/services/privacy";
+import { redirect } from "next/navigation";
 
 const reason = z.string().trim().min(3, "Bitte gib eine Begründung an.").max(500);
 
@@ -96,4 +99,25 @@ export async function addSupportNoteAction(
   await addSupportNote(db, { userId, authorId: actor.id, authorName: actor.name, note: note.data });
   revalidatePath(`/admin/kunden/${userId}`);
   return { ok: true, message: "Notiz gespeichert." };
+}
+
+export async function deleteCustomerAction(
+  userId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const actor = await requirePermission("customers:write", `/admin/kunden/${userId}`);
+  const parsedReason = reason.safeParse(formData.get("reason"));
+  if (!parsedReason.success) return { ok: false, message: "Bitte gib eine Begründung an." };
+  try {
+    await deleteAccount(
+      db,
+      { newsletter: newsletterAdapter() },
+      { userId, actor, reason: parsedReason.data },
+    );
+  } catch (error) {
+    if (error instanceof PrivacyError) return { ok: false, message: error.message };
+    throw error;
+  }
+  redirect("/admin/kunden");
 }

@@ -55,3 +55,65 @@ wird beim Abruf berechnet; Jobs verschicken nur Benachrichtigungen.
 
 Jeder Versand wird in `email_log` (ohne Mailadresse) mit Deduplizierungsschlüssel protokolliert –
 ein Job kann gefahrlos mehrfach laufen. Einen Job sofort ausführen: `pnpm job expiry-reminders`.
+
+---
+
+## 3. Backups und Wiederherstellung (AK-14)
+
+### 3.1 Was wird gesichert?
+- **Nächtlich 02:30 Uhr** (Job `backup`): vollständiger `pg_dump` (Custom-Format) der Datenbank,
+  verschlüsselt mit AES-256-GCM (Schlüssel aus `BACKUP_ENCRYPTION_KEY`), abgelegt in einem
+  **separaten** Objektspeicher (`BACKUP_S3_*`, idealerweise anderer Anbieter oder andere Region als
+  der Server). Aufbewahrung: 30 Tage (`BACKUP_RETENTION_DAYS`), ältere Sicherungen werden gelöscht.
+- **Sonntags 04:00 Uhr** (Job `restore-test`): das neueste Backup wird in eine temporäre Datenbank
+  zurückgespielt, die Zeilenzahlen werden mit der Live-Datenbank verglichen, danach wird die
+  temporäre Datenbank wieder entfernt. Ergebnis: Adminbereich → *Backups*.
+- **Nicht** in der Datenbank: Videos (Bunny Stream) und PDFs/Audios (Objektspeicher). Für den
+  Objektspeicher die Versionierung/Replikation des Anbieters aktivieren; Videos liegen zusätzlich als
+  Originaldateien bei der Betreiberin.
+
+> **Wichtig:** `BACKUP_ENCRYPTION_KEY` zusätzlich außerhalb des Servers aufbewahren (Passwortmanager).
+> Ohne diesen Schlüssel sind die Backups wertlos.
+
+### 3.2 Befehle
+```bash
+pnpm backup                 # Backup sofort erstellen
+pnpm backup list            # gespeicherte Backups anzeigen
+pnpm backup verify          # Restore-Test mit dem neuesten Backup (temporäre Datenbank)
+pnpm backup restore latest postgres://user:pw@host:5432/zieldatenbank --confirm
+```
+In Produktion im Worker-Container ausführen: `docker compose exec worker pnpm backup verify`.
+
+### 3.3 Notfall-Wiederherstellung (dokumentierter Ablauf)
+1. Wartungsmodus: `docker compose stop app worker` (Website kurz offline).
+2. Neue, leere Datenbank anlegen:
+   `docker compose exec db createdb -U seelenzeit seelenzeit_restore`
+3. Backup einspielen:
+   `docker compose run --rm worker pnpm backup restore latest postgres://seelenzeit:…@db:5432/seelenzeit_restore --confirm`
+4. Prüfen: `docker compose exec db psql -U seelenzeit seelenzeit_restore -c "select count(*) from users; select count(*) from orders;"`
+5. Umschalten: `DATABASE_URL` auf `seelenzeit_restore` ändern (oder alte DB umbenennen:
+   `ALTER DATABASE seelenzeit RENAME TO seelenzeit_alt; ALTER DATABASE seelenzeit_restore RENAME TO seelenzeit;`).
+6. `docker compose up -d app worker`, Anmeldung und einen Kurs stichprobenartig prüfen.
+7. Webhooks, die während der Ausfallzeit fehlschlugen, stellt der Reseller automatisch erneut zu
+   (CopeCart: 10 Versuche in 3 Stunden). Längere Ausfälle: im Reseller-Konto IPNs erneut senden.
+
+### 3.4 Restore-Test-Protokoll
+| Datum | Backup | Ergebnis | Durchgeführt von |
+|---|---|---|---|
+| 2026-10-05 | `backups/seelenzeit-20261005-204800.dump.enc` (lokal) | erfolgreich, alle Zeilenzahlen identisch | Entwicklung (`pnpm backup verify`) |
+
+Nach Go-Live mindestens quartalsweise einen manuellen Restore-Test auf Staging durchführen und hier
+eintragen.
+
+---
+
+## 4. Datenschutz-Funktionen
+
+- **Selbstauskunft (Art. 15 DSGVO):** Kundinnen laden unter *Mein Bereich → Meine Daten* alle
+  gespeicherten Daten als JSON herunter.
+- **Kontolöschung:** selbst (*Meine Daten*) oder durch Admin/Kundenservice (Kundenakte, mit
+  Begründung). Persönliche Daten werden anonymisiert, Zugänge beendet, Newsletter-Kontakt beim
+  Anbieter entfernt. Kaufdatensätze bleiben bis `retention_until` (10 Jahre) erhalten und werden dann
+  vom Job `retention-purge` (täglich 03:15 Uhr) gelöscht.
+- **Export (ARC-03):** Adminbereich → *Export*: Kunden, Käufe, Berechtigungen, Einwilligungen und
+  Kursinhalte als CSV oder JSON. Jeder Export steht im Auditlog.

@@ -136,7 +136,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M8 – Export, Löschung, Backup ⬜
+### M8 – Export, Löschung, Backup ✅
 **Ziel:** Datenhoheit und Ausfallsicherheit.
 - Export (CSV + JSON): Kunden, Käufe, Berechtigungen, Einwilligungen
 - Kunden-Selbstauskunft (DSGVO Art. 15) als Download im Konto

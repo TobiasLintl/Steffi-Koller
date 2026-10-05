@@ -21,6 +21,7 @@ import {
 } from "@/server/services/customers";
 import {
   addSupportNoteAction,
+  deleteCustomerAction,
   extendAccessAction,
   grantAccessAction,
   revokeAccessAction,
@@ -307,6 +308,28 @@ export default async function CustomerFilePage({ params }: PageProps<"/admin/kun
           >
             <FormField id="note" label="Neue Notiz">
               <Textarea id="note" name="note" rows={3} required />
+            </FormField>
+          </ActionForm>
+        </Card>
+      ) : null}
+      {hasPermission(actor.role, "customers:write") && !file.user.anonymizedAt ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Konto löschen (DSGVO)</CardTitle>
+          </CardHeader>
+          <p className="text-sm text-muted-foreground">
+            Persönliche Daten werden anonymisiert, Zugänge beendet. Kaufbelege bleiben bis zum
+            Ablauf der Aufbewahrungsfrist erhalten.
+          </p>
+          <ActionForm
+            action={deleteCustomerAction.bind(null, file.user.id)}
+            submitLabel="Konto löschen"
+            variant="destructive"
+            confirm="Kundenkonto endgültig löschen?"
+            className="max-w-xl"
+          >
+            <FormField id="delete-reason" label="Begründung (z. B. Löschanfrage per E-Mail vom …)">
+              <Input id="delete-reason" name="reason" required minLength={3} />
             </FormField>
           </ActionForm>
         </Card>
