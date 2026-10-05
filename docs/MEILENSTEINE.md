@@ -64,7 +64,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M3 – Reseller-Anbindung (Webhook) ⬜
+### M3 – Reseller-Anbindung (Webhook) ✅
 **Ziel:** Ein echter Testkauf schaltet automatisch frei.
 - Payment-Adapter-Interface + **CopeCart-Adapter** (Digistore24 als zweiter Adapter danach)
 - `POST /api/webhooks/copecart`: Signaturprüfung, Rohpayload in `webhook_events`,

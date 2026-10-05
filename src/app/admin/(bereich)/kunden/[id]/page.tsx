@@ -22,6 +22,7 @@ const EVENT_LABELS = {
   extended: "Verlängert",
   revoked: "Gesperrt",
   reinstated: "Wieder freigeschaltet",
+  reduced: "Verlängerung zurückgenommen",
 };
 
 export default async function CustomerFilePage({ params }: PageProps<"/admin/kunden/[id]">) {
