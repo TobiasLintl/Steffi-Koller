@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { LessonMedia } from "@/components/account/lesson-media";
 import { RichText } from "@/components/rich-text";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import { requireUser } from "@/server/auth/session";
 import { db } from "@/server/db";
+import { serverEnv } from "@/server/env";
+import { videoAdapter } from "@/server/media/registry";
 import { getLessonForUser } from "@/server/services/learning";
+import { lessonMediaForPlayback } from "@/server/services/media";
 import { toggleLessonCompleted } from "./actions";
 
 export default async function LessonPage({
@@ -45,6 +49,12 @@ export default async function LessonPage({
   }
 
   const { view } = result;
+  const mediaItems = await lessonMediaForPlayback(
+    db,
+    videoAdapter(),
+    view.lesson.id,
+    serverEnv().VIDEO_TOKEN_TTL_SECONDS,
+  );
   const toggle = toggleLessonCompleted.bind(
     null,
     view.course.slug,
@@ -64,6 +74,8 @@ export default async function LessonPage({
         <p className="text-sm text-muted-foreground">{view.module.title}</p>
         <h1 className="text-2xl font-semibold">{view.lesson.title}</h1>
       </div>
+
+      <LessonMedia items={mediaItems} courseSlug={view.course.slug} lessonId={view.lesson.id} />
 
       {view.lesson.body ? <RichText text={view.lesson.body} /> : null}
 

@@ -81,7 +81,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M4 – Medien: Video, PDF, Audio ⬜
+### M4 – Medien: Video, PDF, Audio ✅
 **Ziel:** Geschützte Kursinhalte.
 - Video-Adapter + Bunny-Stream-Implementierung: Upload aus Admin, Token-signierte
   Wiedergabe-URLs, Untertitel (VTT), Transkript-Feld pro Lektion
