@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/server/db";
 import { getPublicProduct } from "@/server/services/catalog";
+import { activePromotionsFor } from "@/server/services/coupons";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function ProductPage({ params }: PageProps<"/angebote/[slug
   const row = await getPublicProduct(db, slug);
   if (!row) notFound();
   const { product } = row;
+  const promotions = await activePromotionsFor(db, product.id);
   const free = product.tier === "free";
 
   return (
@@ -51,6 +53,17 @@ export default async function ProductPage({ params }: PageProps<"/angebote/[slug
       </div>
 
       {product.description ? <RichText text={product.description} /> : null}
+
+      {promotions.map((promo) => (
+        <p
+          key={promo.id}
+          className="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm"
+          role="note"
+        >
+          {promo.websiteNotice ||
+            `Aktion: Mit dem Code ${promo.code} sparst du im Bestellformular.`}
+        </p>
+      ))}
 
       <aside className="flex flex-col gap-4 rounded-2xl border bg-card p-6">
         <p className="text-2xl font-semibold">{priceLabel(product)}</p>

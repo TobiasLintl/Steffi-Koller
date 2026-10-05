@@ -64,6 +64,7 @@ export async function finishUploadAction(mediaId: string): Promise<string> {
 }
 
 export async function refreshStatusAction(mediaId: string): Promise<void> {
+  await requirePermission("media:write", "/admin/medien");
   await finishUploadAction(mediaId);
 }
 

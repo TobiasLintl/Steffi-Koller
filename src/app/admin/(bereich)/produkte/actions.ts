@@ -7,7 +7,16 @@ import { fieldErrorsFrom, type ActionState } from "@/lib/action-state";
 import { PAYMENT_PROVIDERS } from "@/server/adapters/payment";
 import { requirePermission } from "@/server/auth/session";
 import { db } from "@/server/db";
-import { addProductMapping, removeProductMapping } from "@/server/services/products";
+import { productInputSchema } from "@/server/domain/catalog/schemas";
+import {
+  addProductMapping,
+  CatalogError,
+  createProduct,
+  deleteProduct,
+  removeProductMapping,
+  updateProduct,
+} from "@/server/services/products";
+import { redirect } from "next/navigation";
 
 const mappingSchema = z.object({
   productId: z.uuid(),
@@ -37,4 +46,68 @@ export async function removeMappingAction(mappingId: string): Promise<void> {
   const actor = await requirePermission("products:write", "/admin/produkte");
   await removeProductMapping(db, actor, z.uuid().parse(mappingId));
   revalidatePath("/admin/produkte");
+}
+
+function parseProduct(formData: FormData) {
+  return productInputSchema.safeParse({
+    ...Object.fromEntries(formData),
+    isPublished: formData.get("isPublished") === "on",
+  });
+}
+
+export async function createProductAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const actor = await requirePermission("products:write", "/admin/produkte");
+  const parsed = parseProduct(formData);
+  if (!parsed.success)
+    return {
+      ok: false,
+      message: "Bitte prüfe die Eingaben.",
+      fieldErrors: fieldErrorsFrom(parsed.error.issues),
+    };
+  let id: string;
+  try {
+    id = await createProduct(db, actor, parsed.data);
+  } catch (error) {
+    if (error instanceof CatalogError) return { ok: false, message: error.message };
+    throw error;
+  }
+  redirect(`/admin/produkte/${id}`);
+}
+
+export async function updateProductAction(
+  id: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const actor = await requirePermission("products:write", "/admin/produkte");
+  const parsed = parseProduct(formData);
+  if (!parsed.success)
+    return {
+      ok: false,
+      message: "Bitte prüfe die Eingaben.",
+      fieldErrors: fieldErrorsFrom(parsed.error.issues),
+    };
+  try {
+    await updateProduct(db, actor, z.uuid().parse(id), parsed.data);
+  } catch (error) {
+    if (error instanceof CatalogError) return { ok: false, message: error.message };
+    throw error;
+  }
+  revalidatePath("/admin/produkte");
+  revalidatePath(`/angebote/${parsed.data.slug}`);
+  return { ok: true, message: "Gespeichert." };
+}
+
+export async function deleteProductAction(id: string): Promise<ActionState> {
+  const actor = await requirePermission("products:write", "/admin/produkte");
+  try {
+    await deleteProduct(db, actor, z.uuid().parse(id));
+  } catch (error) {
+    if (error instanceof CatalogError) return { ok: false, message: error.message };
+    throw error;
+  }
+  redirect("/admin/produkte");
 }

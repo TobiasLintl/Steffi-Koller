@@ -119,7 +119,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M7 – Adminbereich vollständig ⬜
+### M7 – Adminbereich vollständig ✅
 **Ziel:** Betreiberin pflegt alles ohne Code.
 - Produkte & Preise, Kurse/Module/Lektionen (Sortierung per Drag & Drop), Drip-Regeln
 - Medien zuordnen, Download-Schalter

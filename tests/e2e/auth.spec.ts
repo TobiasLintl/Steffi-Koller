@@ -22,7 +22,7 @@ test("customer is kept out of the admin area", async ({ page }) => {
 test("staff must set up two-factor authentication before using the admin area", async ({
   page,
 }) => {
-  await login(page, "support@example.test", "/admin");
+  await login(page, "neu@example.test", "/admin");
   await expect(page).toHaveURL(/\/admin\/2fa-einrichten$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "Zwei-Faktor-Anmeldung einrichten",

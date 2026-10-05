@@ -7,6 +7,7 @@ import { fieldErrorsFrom, type ActionState } from "@/lib/action-state";
 import { requirePermission } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { adminExtendAccess, adminGrantAccess, adminRevokeAccess } from "@/server/services/access";
+import { addSupportNote } from "@/server/services/customers";
 
 const reason = z.string().trim().min(3, "Bitte gib eine Begründung an.").max(500);
 
@@ -77,4 +78,22 @@ export async function revokeAccessAction(
   await adminRevokeAccess(db, actor, { userId, ...parsed.data });
   revalidatePath(`/admin/kunden/${userId}`);
   return { ok: true, message: "Zugang wurde gesperrt." };
+}
+
+export async function addSupportNoteAction(
+  userId: string,
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const actor = await requirePermission("support:write", `/admin/kunden/${userId}`);
+  const note = z
+    .string()
+    .trim()
+    .min(2, "Bitte eine Notiz eingeben.")
+    .max(5000)
+    .safeParse(formData.get("note"));
+  if (!note.success) return { ok: false, message: note.error.issues[0]?.message };
+  await addSupportNote(db, { userId, authorId: actor.id, authorName: actor.name, note: note.data });
+  revalidatePath(`/admin/kunden/${userId}`);
+  return { ok: true, message: "Notiz gespeichert." };
 }

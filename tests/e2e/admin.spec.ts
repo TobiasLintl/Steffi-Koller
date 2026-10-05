@@ -24,7 +24,9 @@ test("admin finds a customer and sees her access", async ({ page }) => {
 
 test("product mappings and webhook URLs are visible to the admin", async ({ page }) => {
   await loginAdmin(page, "/admin/produkte");
-  await expect(page.getByText("cc-achtsam-durch-den-tag", { exact: true })).toBeVisible();
+  await expect(page.getByText("copecart: cc-achtsam-durch-den-tag", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Achtsam durch den Tag", exact: true }).click();
+  await expect(page.getByLabel("Zugangsdauer in Monaten")).toHaveValue("6");
   await page.goto("/admin/einstellungen");
   await expect(page.getByText(/\/api\/webhooks\/copecart/)).toBeVisible();
 });
