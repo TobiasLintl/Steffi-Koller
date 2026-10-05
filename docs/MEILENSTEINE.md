@@ -149,7 +149,13 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ---
 
-### M9 – Deployment und Go-Live ⬜
+### M9 – Deployment und Go-Live 🟨
+> **Stand:** Code, Docker-Images, Compose (Prod + Staging), Caddy (HTTPS, Security-Header), CSP mit
+> Nonce, Health-/Backup-Monitoring-Endpunkte, Deploy-Skript, CI (Audit + Docker-Build) und
+> `docs/BETRIEB.md` sind fertig. **Offen (durch Betreiberin/Technik):** Server einrichten,
+> Rechtstexte einpflegen, echte Testkäufe EUR/CHF/B2B + Rückerstattung auf Staging, externe
+> Sicherheitsprüfung, Abnahme-Tabelle in `docs/BETRIEB.md` §7 ausfüllen.
+
 **Ziel:** Produktivbetrieb auf seelenzeit.de.
 - Hetzner-Server (Empfehlung: mind. CX32), Docker Compose, Caddy mit automatischem HTTPS
 - Staging-Umgebung (Subdomain) + Produktion

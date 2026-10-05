@@ -1,0 +1,94 @@
+# Production / staging stack on one Hetzner server (see docs/BETRIEB.md §5).
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+name: ${COMPOSE_PROJECT_NAME:-seelenzeit}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  migrate:
+    build:
+      context: .
+      target: worker
+    image: seelenzeit-worker:${IMAGE_TAG:-latest}
+    env_file: ${ENV_FILE:-.env.production}
+    command: ["pnpm", "db:migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+  app:
+    build:
+      context: .
+      target: app
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_STATISTICS_SCRIPT_URL: ${NEXT_PUBLIC_STATISTICS_SCRIPT_URL:-}
+        NEXT_PUBLIC_STATISTICS_DOMAIN: ${NEXT_PUBLIC_STATISTICS_DOMAIN:-}
+    image: seelenzeit-app:${IMAGE_TAG:-latest}
+    env_file: ${ENV_FILE:-.env.production}
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - "3000"
+    logging: *logging
+
+  worker:
+    image: seelenzeit-worker:${IMAGE_TAG:-latest}
+    env_file: ${ENV_FILE:-.env.production}
+    command: ["pnpm", "worker"]
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      REDIRECT_DOMAIN: ${REDIRECT_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+      STAGING_USER: ${STAGING_USER:-}
+      STAGING_PASSWORD_HASH: ${STAGING_PASSWORD_HASH:-}
+    volumes:
+      - ${CADDYFILE:-./deploy/Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    logging: *logging
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:

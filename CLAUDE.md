@@ -37,6 +37,7 @@ EU technisch vorbereitet. Die Betreiberin pflegt alles über einen Adminbereich 
 | Tests | Vitest (Unit/Integration), Playwright (E2E) | |
 | Deployment | Docker Compose auf Hetzner Cloud (EU), Caddy als Reverse Proxy | |
 | PWA | Web App Manifest + Service Worker (Stufe 2) | |
+| Ergänzt (M0–M9) | `postgres` (DB-Treiber), `tsx` (Skripte), `server-only`, `qrcode` (2FA-QR-Code), `@aws-sdk/client-s3` + `s3-request-presigner` (S3-Adapter), shadcn-Hilfspakete | jeweils minimal, siehe Commits |
 
 Wenn eine Bibliothek ergänzt werden soll, die hier nicht steht: kurz begründen und erst nach
 Rückfrage einführen.
@@ -78,6 +79,7 @@ src/
       questionnaires/
     adapters/
       payment/  video/  storage/  mail/  newsletter/  ai/
+    services/               # Anwendungsfälle mit DB-Zugriff (nehmen `db` als Parameter)
     db/
       schema/               # Drizzle-Schema, nach Bereich getrennt
       migrations/
