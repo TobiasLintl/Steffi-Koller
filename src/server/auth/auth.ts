@@ -104,7 +104,7 @@ function createAuth() {
       },
     },
     plugins: [
-      twoFactor({ issuer: "Seelenzeit" }),
+      twoFactor({ issuer: "Seelenzeit", backupCodeOptions: { storeBackupCodes: "encrypted" } }),
       magicLink({
         disableSignUp: true,
         expiresIn: 600,

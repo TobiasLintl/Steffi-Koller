@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 
-import { hashPassword } from "better-auth/crypto";
+import { hashPassword, symmetricEncrypt } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
 
 import { createDb } from "./index";
@@ -12,7 +12,9 @@ import {
   entitlements,
   lessons,
   modules,
+  productProviderMappings,
   products,
+  twoFactors,
   users,
 } from "./schema";
 
@@ -81,6 +83,7 @@ async function main() {
       });
     }
     await seedCatalog(db);
+    await seedAdminTwoFactor(db);
     console.log(
       `Seeded ${PEOPLE.length} fictional users (password: ${SEED_PASSWORD}) and example courses.`,
     );
@@ -90,6 +93,35 @@ async function main() {
 }
 
 type SeedDb = ReturnType<typeof createDb>["db"];
+
+/**
+ * Development only: the seeded admin gets a fixed, publicly known TOTP secret so that local
+ * E2E tests can sign in. Never run the seed against production.
+ */
+export const DEV_ADMIN_TOTP_SECRET = "seelenzeit-dev-totp-secret-00001";
+
+async function seedAdminTwoFactor(db: SeedDb) {
+  const secret = process.env.BETTER_AUTH_SECRET;
+  if (!secret || process.env.NODE_ENV === "production") return;
+  const [admin] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, "admin@example.test"));
+  if (!admin) return;
+  const [existing] = await db
+    .select({ id: twoFactors.id })
+    .from(twoFactors)
+    .where(eq(twoFactors.userId, admin.id));
+  if (existing) return;
+  await db.insert(twoFactors).values({
+    id: randomUUID(),
+    userId: admin.id,
+    secret: await symmetricEncrypt({ key: secret, data: DEV_ADMIN_TOTP_SECRET }),
+    backupCodes: await symmetricEncrypt({ key: secret, data: JSON.stringify(["devbk-00001"]) }),
+    verified: true,
+  });
+  await db.update(users).set({ twoFactorEnabled: true }).where(eq(users.id, admin.id));
+}
 
 const COURSES = [
   {
@@ -198,6 +230,15 @@ async function seedCatalog(db: SeedDb) {
         sortOrder: 100 + ci,
       },
     ]);
+  }
+
+  // Example reseller mappings (fictional CopeCart product ids).
+  const seededProducts = await db.select({ id: products.id, slug: products.slug }).from(products);
+  for (const p of seededProducts) {
+    await db
+      .insert(productProviderMappings)
+      .values({ provider: "copecart", providerProductId: `cc-${p.slug}`, productId: p.id })
+      .onConflictDoNothing();
   }
 
   // Example access: Klara has the small course (active) and the medium one (expired).

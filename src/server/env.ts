@@ -20,6 +20,9 @@ const serverEnvSchema = z
     MAIL_FROM_NEWSLETTER: z.email().default("newsletter@seelenzeit.de"),
     MAIL_SENDER_NAME: z.string().default("Seelenzeit"),
     ADMIN_NOTIFICATION_EMAIL: z.email().optional(),
+
+    COPECART_WEBHOOK_SECRET: z.string().optional(),
+    DIGISTORE24_IPN_PASSPHRASE: z.string().optional(),
   })
   .refine((env) => env.NODE_ENV !== "production" || Boolean(env.BETTER_AUTH_SECRET), {
     message: "BETTER_AUTH_SECRET is required in production",

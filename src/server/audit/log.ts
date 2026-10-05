@@ -16,7 +16,11 @@ export type AuditAction =
   | "account.deleted"
   | "media.deleted"
   | "course.deleted"
+  | "product.created"
+  | "product.updated"
   | "product.deleted"
+  | "product.mapping_changed"
+  | "webhook.reprocessed"
   | "settings.changed"
   | "backup.restored";
 

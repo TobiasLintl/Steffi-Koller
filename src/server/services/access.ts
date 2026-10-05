@@ -4,7 +4,7 @@ import { writeAudit } from "@/server/audit/log";
 import type { Role } from "@/server/auth/permissions";
 import { entitlementEvents, entitlements } from "@/server/db/schema";
 import type { DbExecutor } from "@/server/db/types";
-import { extendedExpiry, initialExpiry } from "@/server/domain/access";
+import { addMonths, extendedExpiry, initialExpiry } from "@/server/domain/access";
 
 /**
  * Entitlement use-cases. Every change runs in a transaction with a row lock, so concurrent
@@ -15,7 +15,8 @@ type Source = "purchase" | "manual" | "free";
 
 export interface AccessChange {
   entitlementId: string;
-  result: "granted" | "extended" | "reinstated" | "revoked" | "unchanged" | "skipped_revoked";
+  result:
+    "granted" | "extended" | "reinstated" | "revoked" | "reduced" | "unchanged" | "skipped_revoked";
   expiresAt: Date | null;
 }
 
@@ -176,6 +177,36 @@ export async function revokeAccess(
       reason: input.reason,
     });
     return { entitlementId: current.id, result: "revoked", expiresAt: current.expiresAt };
+  });
+}
+
+/** Rolls back an extension (e.g. refunded extension purchase): expires_at -= months. */
+export async function reduceAccess(
+  db: DbExecutor,
+  input: CommonInput & { months: number },
+): Promise<AccessChange> {
+  const now = input.now ?? new Date();
+  return db.transaction(async (tx) => {
+    const current = await lockEntitlement(tx, input.userId, input.courseId);
+    if (!current) throw new AccessError("not_found");
+    if (current.expiresAt === null || current.status === "revoked") {
+      return { entitlementId: current.id, result: "unchanged", expiresAt: current.expiresAt };
+    }
+    const expiresAt = addMonths(current.expiresAt, -Math.abs(input.months));
+    await tx
+      .update(entitlements)
+      .set({ expiresAt, updatedAt: now })
+      .where(eq(entitlements.id, current.id));
+    await tx.insert(entitlementEvents).values({
+      entitlementId: current.id,
+      type: "reduced",
+      previousExpiresAt: current.expiresAt,
+      newExpiresAt: expiresAt,
+      actorUserId: input.actorUserId,
+      orderId: input.orderId,
+      reason: input.reason,
+    });
+    return { entitlementId: current.id, result: "reduced", expiresAt };
   });
 }
 

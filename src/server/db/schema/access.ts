@@ -11,6 +11,7 @@ import {
 
 import { users } from "./auth";
 import { courses, lessons } from "./catalog";
+import { orders } from "./orders";
 
 export const entitlementStatusEnum = pgEnum("entitlement_status", ["active", "revoked"]);
 export const entitlementSourceEnum = pgEnum("entitlement_source", ["purchase", "manual", "free"]);
@@ -19,6 +20,7 @@ export const entitlementEventTypeEnum = pgEnum("entitlement_event_type", [
   "extended",
   "revoked",
   "reinstated",
+  "reduced",
 ]);
 
 /** Exactly one entitlement per user and course (CLAUDE.md §5.1). */
@@ -59,7 +61,7 @@ export const entitlementEvents = pgTable(
     newExpiresAt: timestamp({ withTimezone: true }),
     /** Staff user for manual changes; null for automatic (webhook) changes. */
     actorUserId: text(),
-    orderId: uuid(),
+    orderId: uuid().references(() => orders.id, { onDelete: "set null" }),
     reason: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },

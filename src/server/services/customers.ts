@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { and, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import {
@@ -90,4 +92,79 @@ export async function listCoursesForSelect(db: DbExecutor) {
     .select({ id: courses.id, title: courses.title })
     .from(courses)
     .orderBy(asc(courses.title));
+}
+
+export interface BuyerData {
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  country?: string;
+  customerType: "b2c" | "b2b";
+  billing: {
+    companyName?: string;
+    vatId?: string;
+    street?: string;
+    postalCode?: string;
+    city?: string;
+    country?: string;
+  };
+}
+
+/**
+ * Finds the account by e-mail or creates one (CLAUDE.md §5.3). New accounts have no password;
+ * the buyer signs in with a magic link, which also verifies the address.
+ */
+export async function findOrCreateCustomer(
+  db: DbExecutor,
+  buyer: BuyerData,
+): Promise<{ id: string; email: string; name: string; created: boolean }> {
+  const email = buyer.email.trim().toLowerCase();
+  const name =
+    [buyer.firstName, buyer.lastName].filter(Boolean).join(" ") ||
+    email.split("@")[0] ||
+    "Kundin/Kunde";
+  const id = randomUUID();
+  const inserted = await db
+    .insert(users)
+    .values({ id, email, name, role: "customer", emailVerified: false })
+    .onConflictDoNothing({ target: users.email })
+    .returning({ id: users.id, email: users.email, name: users.name });
+  const user =
+    inserted[0] ??
+    (
+      await db
+        .select({ id: users.id, email: users.email, name: users.name })
+        .from(users)
+        .where(eq(users.email, email))
+    )[0];
+  if (!user) throw new Error("Customer could not be created");
+
+  const [profile] = await db
+    .select()
+    .from(customerProfiles)
+    .where(eq(customerProfiles.userId, user.id));
+  const b2b = buyer.customerType === "b2b";
+  const patch = {
+    firstName: profile?.firstName ?? buyer.firstName ?? null,
+    lastName: profile?.lastName ?? buyer.lastName ?? null,
+    country: buyer.country ?? profile?.country ?? null,
+    // The latest B2B purchase carries the current billing data.
+    ...(b2b
+      ? {
+          customerType: "b2b" as const,
+          companyName: buyer.billing.companyName ?? null,
+          vatId: buyer.billing.vatId ?? null,
+          street: buyer.billing.street ?? null,
+          postalCode: buyer.billing.postalCode ?? null,
+          city: buyer.billing.city ?? null,
+        }
+      : {}),
+    updatedAt: new Date(),
+  };
+  await db
+    .insert(customerProfiles)
+    .values({ userId: user.id, ...patch })
+    .onConflictDoUpdate({ target: customerProfiles.userId, set: patch });
+
+  return { ...user, created: Boolean(inserted[0]) };
 }
