@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { DEFAULT_SIGNED_URL_TTL_SECONDS, type StorageAdapter } from "./types";
@@ -110,6 +110,15 @@ export function createLocalStorageAdapter(config: LocalStorageConfig): StorageAd
     },
     async deleteObject(key) {
       await rm(safeKeyPath(config.rootDir, key), { force: true });
+    },
+    async list(prefix) {
+      const root = path.resolve(config.rootDir);
+      const entries = await readdir(root, { recursive: true, withFileTypes: true }).catch(() => []);
+      return entries
+        .filter((e) => e.isFile())
+        .map((e) => path.relative(root, path.join(e.parentPath, e.name)).split(path.sep).join("/"))
+        .filter((key) => key.startsWith(prefix))
+        .sort();
     },
   };
 }

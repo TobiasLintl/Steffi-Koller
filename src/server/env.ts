@@ -39,6 +39,16 @@ const serverEnvSchema = z
     BUNNY_STREAM_TOKEN_KEY: z.string().optional(),
     VIDEO_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(3600),
 
+    BACKUP_STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+    BACKUP_DIR: z.string().default("./var/backups"),
+    BACKUP_S3_ENDPOINT: z.url().optional(),
+    BACKUP_S3_REGION: z.string().default("eu-central"),
+    BACKUP_S3_BUCKET: z.string().optional(),
+    BACKUP_S3_ACCESS_KEY_ID: z.string().optional(),
+    BACKUP_S3_SECRET_ACCESS_KEY: z.string().optional(),
+    BACKUP_ENCRYPTION_KEY: z.string().min(16).optional(),
+    BACKUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+
     COPECART_WEBHOOK_SECRET: z.string().optional(),
     DIGISTORE24_IPN_PASSPHRASE: z.string().optional(),
   })

@@ -53,3 +53,16 @@ export async function requirePermission(
   if (!hasPermission(user.role, permission)) redirect("/admin/kein-zugriff");
   return user;
 }
+
+/** For route handlers: staff user with permission (incl. 2FA) or null – no redirects. */
+export async function staffWithPermission(permission: Permission): Promise<CurrentUser | null> {
+  const user = await getCurrentUser();
+  if (
+    !user ||
+    !isStaffRole(user.role) ||
+    !user.twoFactorEnabled ||
+    !hasPermission(user.role, permission)
+  )
+    return null;
+  return user;
+}

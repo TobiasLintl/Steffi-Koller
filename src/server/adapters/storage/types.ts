@@ -28,6 +28,8 @@ export interface StorageAdapter {
   getSignedDownloadUrl(key: string, options: SignedUrlOptions): Promise<string>;
   getSignedUploadUrl(key: string, contentType: string, ttlSeconds?: number): Promise<UploadTarget>;
   deleteObject(key: string): Promise<void>;
+  /** Keys below a prefix (used for backup retention). */
+  list(prefix: string): Promise<string[]>;
 }
 
 export function contentDisposition(

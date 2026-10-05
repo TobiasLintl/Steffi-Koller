@@ -70,17 +70,15 @@ describe("products", () => {
       tier: "small",
       accessMonths: 6,
     });
-    await db
-      .insert(orders)
-      .values({
-        provider: "copecart",
-        transactionId: "t1",
-        providerOrderId: "o1",
-        providerProductId: "p1",
-        productId: product.id,
-        purchasedAt: new Date(),
-        retentionUntil: new Date(),
-      });
+    await db.insert(orders).values({
+      provider: "copecart",
+      transactionId: "t1",
+      providerOrderId: "o1",
+      providerProductId: "p1",
+      productId: product.id,
+      purchasedAt: new Date(),
+      retentionUntil: new Date(),
+    });
     await expect(deleteProduct(db, admin, product.id)).rejects.toBeInstanceOf(CatalogError);
   });
 });
@@ -134,14 +132,12 @@ describe("staff management", () => {
       inviteStaff(db, admin, { email: "neue@example.test", name: "x", role: "editor" }),
     ).rejects.toBeInstanceOf(StaffError);
 
-    await db
-      .insert(sessions)
-      .values({
-        id: randomUUID(),
-        token: randomUUID(),
-        userId,
-        expiresAt: new Date(Date.now() + 3600_000),
-      });
+    await db.insert(sessions).values({
+      id: randomUUID(),
+      token: randomUUID(),
+      userId,
+      expiresAt: new Date(Date.now() + 3600_000),
+    });
     await changeRole(db, admin, userId, "customer", "Ausgeschieden");
     expect((await db.select().from(users).where(eq(users.id, userId)))[0]?.role).toBe("customer");
     expect(await db.select().from(sessions).where(eq(sessions.userId, userId))).toHaveLength(0);

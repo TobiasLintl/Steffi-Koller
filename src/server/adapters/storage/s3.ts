@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -81,6 +82,18 @@ export function createS3StorageAdapter(config: S3StorageConfig): StorageAdapter 
     },
     async deleteObject(key) {
       await client.send(new DeleteObjectCommand({ Bucket, Key: key }));
+    },
+    async list(prefix) {
+      const keys: string[] = [];
+      let token: string | undefined;
+      do {
+        const page = await client.send(
+          new ListObjectsV2Command({ Bucket, Prefix: prefix, ContinuationToken: token }),
+        );
+        for (const item of page.Contents ?? []) if (item.Key) keys.push(item.Key);
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      return keys;
     },
   };
 }

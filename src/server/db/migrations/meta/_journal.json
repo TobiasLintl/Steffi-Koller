@@ -57,6 +57,13 @@
       "when": 1791232239787,
       "tag": "0007_m7_coupons_support_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791233134189,
+      "tag": "0008_m8_backup_runs",
+      "breakpoints": true
     }
   ]
 }

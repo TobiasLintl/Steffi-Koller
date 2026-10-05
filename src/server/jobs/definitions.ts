@@ -4,7 +4,10 @@ import { db } from "@/server/db";
 import { serverEnv } from "@/server/env";
 import { mailAdapter } from "@/server/mail/send";
 import { newsletterAdapter } from "@/server/newsletter/registry";
+import { backupDeps } from "@/server/backup/registry";
+import { runBackup, runRestoreTest } from "@/server/backup/run";
 import { syncPendingSubscriptions } from "@/server/services/newsletter";
+import { purgeExpiredRecords } from "@/server/services/privacy";
 import { runDripNotifications, runExpiryReminders } from "@/server/services/notification-jobs";
 
 export interface JobDefinition {
@@ -17,7 +20,8 @@ export interface JobDefinition {
 
 /** Scheduled background jobs (pg-boss). Access rights never depend on these (CLAUDE.md §5.2). */
 export function jobDefinitions(): JobDefinition[] {
-  const appUrl = serverEnv().NEXT_PUBLIC_APP_URL;
+  const env = serverEnv();
+  const appUrl = env.NEXT_PUBLIC_APP_URL;
   return [
     {
       name: "drip-notifications",
@@ -36,6 +40,24 @@ export function jobDefinitions(): JobDefinition[] {
       cron: "*/15 * * * *",
       description: "Bestätigte Newsletter-Kontakte zum Anbieter übertragen",
       run: () => syncPendingSubscriptions(db, newsletterAdapter()),
+    },
+    {
+      name: "backup",
+      cron: "30 2 * * *",
+      description: "Verschlüsseltes Datenbank-Backup, Aufbewahrung 30 Tage",
+      run: () => runBackup(db, backupDeps(env)),
+    },
+    {
+      name: "restore-test",
+      cron: "0 4 * * 0",
+      description: "Wöchentlicher Restore-Test des neuesten Backups",
+      run: () => runRestoreTest(db, backupDeps(env), { triggeredBy: "schedule" }),
+    },
+    {
+      name: "retention-purge",
+      cron: "15 3 * * *",
+      description: "Kaufdaten nach Ablauf der Aufbewahrungsfrist löschen",
+      run: () => purgeExpiredRecords(db),
     },
   ];
 }
