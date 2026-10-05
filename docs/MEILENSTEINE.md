@@ -24,7 +24,7 @@ Diese Punkte kann Claude Code nicht übernehmen. Sie sollten parallel zu M0–M2
 
 ## Stufe 1 – MUSS zum Start
 
-### M0 – Projektgrundlage ⬜
+### M0 – Projektgrundlage ✅
 **Ziel:** Leeres, sauberes Projekt, das lokal läuft.
 - Next.js + TypeScript strict + Tailwind + shadcn/ui
 - Docker Compose mit PostgreSQL, Drizzle eingerichtet
