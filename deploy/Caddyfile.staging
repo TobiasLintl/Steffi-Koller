@@ -1,0 +1,26 @@
+# Staging: like production, but password protected and not indexed by search engines.
+# STAGING_PASSWORD_HASH: docker run --rm caddy:2-alpine caddy hash-password --plaintext '…'
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Robots-Tag "noindex, nofollow"
+	}
+
+	# Reseller test webhooks must reach staging without the password prompt.
+	@protected not path /api/webhooks/* /api/health*
+	basic_auth @protected {
+		{$STAGING_USER} {$STAGING_PASSWORD_HASH}
+	}
+
+	request_body /api/webhooks/* {
+		max_size 64KB
+	}
+
+	reverse_proxy app:3000
+}

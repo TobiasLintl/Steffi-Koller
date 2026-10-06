@@ -1,0 +1,24 @@
+# Production: automatic HTTPS (Let's Encrypt) for SITE_DOMAIN, redirect from REDIRECT_DOMAIN.
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+	}
+
+	# Reseller webhooks never send large payloads.
+	request_body /api/webhooks/* {
+		max_size 64KB
+	}
+
+	reverse_proxy app:3000
+}
+
+{$REDIRECT_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}

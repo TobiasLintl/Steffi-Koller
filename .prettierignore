@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+.next
+node_modules
+coverage
+playwright-report
+test-results
+src/server/db/migrations
+docs/*.docx
+# Project docs are maintained by hand
+*.md
